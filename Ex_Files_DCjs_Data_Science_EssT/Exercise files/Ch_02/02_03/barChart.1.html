@@ -19,6 +19,14 @@
     #chart {
       width: 90%;
     }
+
+    h2 {
+      font-family: Helvetica;
+    }
+
+    div#chart1 svg g g.axis g.tick text{
+      font-size: 16pt;
+    }
   </style>
 </head>
 <body>
@@ -56,6 +64,13 @@
   {date: "2011-11-14T17:29:52Z", quantity: 1, total: 200, tip: 100, type: "visa"}
 ];
 
+data.forEach(function(d) {
+  var tempData = new Date(d.date)
+
+  console.log(tempData)
+  d.date = tempData
+});
+
 var facts = crossfilter(data);
 var typeDimension = facts.dimension(function(d){ return d.type; });
 
@@ -72,26 +87,40 @@ var totalGroup = totalDimension.group(function (d){
   return Math.floor(d/100) * 100
 })
 
-print_filter("totalGroup")
 
-dc.barChart("#chart")
-    .width(1060)
-    .dimension(typeDimension)
-    .group(typeGroup)
-    .x(d3.scale.ordinal().domain(['cash','tab','visa']))
-    .xUnits(dc.units.ordinal)
+var dateDimension = facts.dimension(function(d){
+  return d.date
+})
+
+var dateGroup = dateDimension.group().reduceSum(function(d){
+  return d.total
+})
+
+var minDate = new Date(dateDimension.bottom(1)[0].date)
+var maxDate = new Date(dateDimension.top(1)[0].date)
+
+// print_filter("dateGroup")
+
+// dc.barChart("#chart")
+//     .width(1060)
+//     .dimension(typeDimension)
+//     .group(typeGroup)
+//     .x(d3.scale.ordinal().domain(['cash','tab','visa']))
+//     .xUnits(dc.units.ordinal)
     
-    .barPadding(0.2)
-    .outerPadding(0.2)
-    .gap(20)
-    .yAxis().ticks(4)
+//     .barPadding(0.2)
+//     .outerPadding(0.2)
+//     // .gap(20)
+//     .yAxis().ticks(4)
 
-var chart1 = dc.barChart("#chart1")
+var chart1 = dc.lineChart("#chart1")
     .width(1060)
-    .dimension(totalDimension)
-    .group(totalGroup)
+    .margins({top: 10, bottom: 30, left: 50, right: 0})
+    .dimension(dateDimension)
+    .group(dateGroup)
+    .yAxisLabel("Transaction Spend ").renderArea(true)
     //.x(d3.scale.ordinal().domain(['cash','tab','visa']))
-    .x(d3.scale.linear().domain([0,400]))//domain takes two values (min - max)
+    .x(d3.time.scale().domain([minDate,maxDate]))//domain takes two values (min - max)
     //.xUnits(dc.units.ordinal)
     .xUnits(dc.units.fp.precision(100))
     // .centerBar(true)
@@ -105,8 +134,8 @@ var chart1 = dc.barChart("#chart1")
 dc.renderAll();
 
   // console.log(data);
-  // console.log(facts);
-  print_filter('typeGroup');
+  console.log(dateDimension.top(3)[0].date);
+  // print_filter('dateDimension.top(3)');
 
 
 
