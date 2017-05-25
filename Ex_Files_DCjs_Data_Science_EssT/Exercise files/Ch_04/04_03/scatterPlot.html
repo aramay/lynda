@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="EN">
+<head>
+  <meta charset="utf-8">
+  <title>Scatter plot</title>
+  <link rel="stylesheet" type="text/css" href="../../dc.css" />
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    div {
+      -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-family: helvetica;
+      font-weight: 100;
+      color: grey;
+      font-size: 20pt;
+    }
+    div#chart svg g g.axis g.tick text {
+      font-size: 16pt;
+    }
+
+  </style>
+</head>
+<body>
+  <h2>Scatter plot: total payment vs. tip</h2>
+  <div id="chart"></div>
+  <script type="text/javascript" src="../../d3.js"></script>
+  <script type="text/javascript" src="../../crossfilter.js"></script>
+  <script type="text/javascript" src="../../dc.js"></script>
+
+  <script type="text/javascript">
+
+  function print_filter(filter) {
+    var f=eval(filter);
+    if (typeof(f.length) != "undefined") {}else{}
+    if (typeof(f.top) != "undefined") {f=f.top(Infinity);}else{}
+    if (typeof(f.dimension) != "undefined") {f=f.dimension(function(d) { return "";}).top(Infinity);}else{}
+    console.log(filter+"("+f.length+") = "+JSON.stringify(f).replace("[","[\n\t").replace(/}\,/g,"},\n\t").replace("]","\n]"));
+  }
+
+  var data = [
+  {date: "2011-11-14T16:17:54Z", quantity: 2, total: 190, tip: 100, type: "tab"},
+  {date: "2011-11-14T16:20:19Z", quantity: 2, total: 190, tip: 100, type: "tab"},
+  {date: "2011-11-14T16:28:54Z", quantity: 1, total: 300, tip: 200, type: "visa"},
+  {date: "2011-11-14T16:30:43Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T16:48:46Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T16:53:41Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T16:54:06Z", quantity: 1, total: 100, tip: 0, type: "cash"},
+  {date: "2011-11-14T16:58:03Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T17:07:21Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T17:22:59Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T17:25:45Z", quantity: 2, total: 200, tip: 0, type: "cash"},
+  {date: "2011-11-14T17:29:52Z", quantity: 1, total: 200, tip: 100, type: "visa"}
+];
+
+data.forEach(function(d){
+  var tempDate = new Date(d.date);
+  d.date = tempDate;
+})
+
+var facts = crossfilter(data);
+var typeDimension = facts.dimension(function(d){ return d.type; });
+var typeGroup = typeDimension.group().reduceSum(function(d){ return d.total; });
+
+var totalDimension = facts.dimension(function(d){ return d.total; });
+var totalGroup = totalDimension.group(function(d){ return Math.floor(d/100)*100; });
+
+var dateDimension = facts.dimension(function(d){ return d.date; });
+var dateGroup = dateDimension.group().reduceSum(function(d){ return d.total; });
+var dateGroupTip = dateDimension.group().reduceSum(function(d){ return d.tip; });
+
+var scatterDimension = facts.dimension(function(d){ return [d.total,d.tip]; });
+var scatterGroup = scatterDimension.group();
+
+var minDate = dateDimension.bottom(1)[0].date;
+var maxDate = dateDimension.top(1)[0].date;
+
+var scatter = dc.scatterPlot("#chart")
+    .width(1360)
+    .height(200)
+    .margins({top:10,bottom:30,right:20,left:50})
+    .dimension(scatterDimension)
+    .group(scatterGroup)
+    // .stack(dateGroupTip,"tip")
+    // .yAxisLabel("Transaction spend")
+    // .renderHorizontalGridLines(true)
+    // .renderArea(true)
+    // .legend(dc.legend().x(1200).y(5).itemHeight(12).gap(5))
+    .symbolSize(20)
+    .clipPadding(20)
+    .symbol('cross')
+    .colorAccessor(function(d){ return d.value; })
+    .colors(d3.scale.category20b())
+    .x(d3.scale.linear().domain([0,300]));
+    // .centerBar(true)
+    //.xUnits(dc.units.fp.precision(100));
+    // .barPadding(0.2)
+    // .outerPadding(0)
+    scatter.yAxis().ticks(5);
+    // lineChart.xAxis().ticks(4);
+
+
+dc.renderAll();
+
+  // console.log(data);
+  //  console.log(dateDimension.top(1)[0].date);
+  print_filter('scatterGroup');
+
+
+
+  </script>
+
+</body>
+</html>

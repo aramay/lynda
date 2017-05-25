@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="EN">
+<head>
+  <meta charset="utf-8">
+  <title>Range chart</title>
+  <link rel="stylesheet" type="text/css" href="../../dc.css" />
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    div {
+      -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-family: helvetica;
+      font-weight: 100;
+      color: grey;
+      font-size: 20pt;
+    }
+    div#chart svg g g.axis g.tick text {
+      font-size: 16pt;
+    }
+
+  </style>
+</head>
+<body>
+  <h2>Range chart: total payment plus tip</h2>
+  <div id="chart"></div>
+  <div id="range-chart"></div>
+  <script type="text/javascript" src="../../d3.js"></script>
+  <script type="text/javascript" src="../../crossfilter.js"></script>
+  <script type="text/javascript" src="../../dc.js"></script>
+
+  <script type="text/javascript">
+
+  function print_filter(filter) {
+    var f=eval(filter);
+    if (typeof(f.length) != "undefined") {}else{}
+    if (typeof(f.top) != "undefined") {f=f.top(Infinity);}else{}
+    if (typeof(f.dimension) != "undefined") {f=f.dimension(function(d) { return "";}).top(Infinity);}else{}
+    console.log(filter+"("+f.length+") = "+JSON.stringify(f).replace("[","[\n\t").replace(/}\,/g,"},\n\t").replace("]","\n]"));
+  }
+
+  var data = [
+  {date: "2011-11-14T16:17:54Z", quantity: 2, total: 190, tip: 100, type: "tab"},
+  {date: "2011-11-14T16:20:19Z", quantity: 2, total: 190, tip: 100, type: "tab"},
+  {date: "2011-11-14T16:28:54Z", quantity: 1, total: 300, tip: 200, type: "visa"},
+  {date: "2011-11-14T16:30:43Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T16:48:46Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T16:53:41Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T16:54:06Z", quantity: 1, total: 100, tip: 0, type: "cash"},
+  {date: "2011-11-14T16:58:03Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T17:07:21Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T17:22:59Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T17:25:45Z", quantity: 2, total: 200, tip: 0, type: "cash"},
+  {date: "2011-11-14T17:29:52Z", quantity: 1, total: 200, tip: 100, type: "visa"}
+];
+
+data.forEach(function(d){
+  var tempDate = new Date(d.date);
+  d.date = tempDate;
+})
+
+var facts = crossfilter(data);
+// var typeDimension = facts.dimension(function(d){ return d.type; });
+// var typeGroup = typeDimension.group().reduceSum(function(d){ return d.total; });
+//
+// var totalDimension = facts.dimension(function(d){ return d.total; });
+// var totalGroup = totalDimension.group(function(d){ return Math.floor(d/100)*100; });
+
+var dateDimension = facts.dimension(function(d){ return d.date; });
+var volGroup = dateDimension.group();
+
+var dateGroup = dateDimension.group().reduceSum(function(d){ return d.total; });
+var dateGroupTip = dateDimension.group().reduceSum(function(d){ return d.tip; });
+
+var minDate = dateDimension.bottom(1)[0].date;
+var maxDate = dateDimension.top(1)[0].date;
+
+var volChart = dc.barChart("#range-chart")
+    .height(70)
+    .width(1360)
+    .margins({top:10,bottom:30,right:10,left:70})
+    .dimension(dateDimension)
+    .group(volGroup)
+    .x(d3.time.scale().domain([minDate,maxDate]));
+
+    volChart.yAxis().ticks(0).outerTickSize(0);
+    volChart.xAxis().ticks(4);
+
+var lineChart = dc.lineChart("#chart")
+    .width(1360)
+    .height(200)
+    .brushOn(false)
+    .rangeChart(volChart)
+    .margins({top:10,bottom:30,right:10,left:70})
+    .dimension(dateDimension)
+    .group(dateGroup,"total spend")
+    .stack(dateGroupTip,"tip")
+    .yAxisLabel("Transaction spend")
+    .renderHorizontalGridLines(true)
+    .renderArea(true)
+    .legend(dc.legend().x(1200).y(5).itemHeight(12).gap(5))
+    .x(d3.time.scale().domain([minDate,maxDate]));
+    // .centerBar(true)
+    //.xUnits(dc.units.fp.precision(100));
+    // .barPadding(0.2)
+    // .outerPadding(0)
+    lineChart.yAxis().ticks(5);
+    lineChart.xAxis().ticks(4);
+
+
+dc.renderAll();
+
+  // console.log(data);
+   console.log(dateDimension.top(1)[0].date);
+  //print_filter('dateDimension.bottom(3)');
+
+
+
+  </script>
+
+</body>
+</html>

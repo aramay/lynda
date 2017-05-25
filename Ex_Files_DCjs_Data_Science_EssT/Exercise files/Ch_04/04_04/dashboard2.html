@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="EN">
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard 2</title>
+  <link rel="stylesheet" type="text/css" href="../../dc.css" />
+  <!-- <link rel="stylesheet" type="text/css" href="../../bootstrap.css" /> -->
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    div {
+      -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+
+    td {
+      border: 1px solid gainsboro;
+    }
+
+    .info {
+      background-color: pink;
+    }
+
+
+    div.row {
+        display: block;
+        height: 100%;
+        width: 100%;
+    }
+
+    div.column {
+      width: 33%;
+      height: 100%;
+      display: block;
+      float: left;
+      /*border:1px solid blue;*/
+    }
+
+    div.column div.subColumn {
+      display: block;
+      height: 100%;
+      width: 50%;
+      float: left;
+    }
+
+    h2 {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    table {
+        border-collapse: collapse;
+        margin: 0 auto;
+        margin-top: 45px;
+    }
+
+    table thead tr,
+    table tbody tr {
+        border-bottom: 1px solid gainsboro;
+        line-height: 2;
+    }
+
+    table tbody tr:hover {
+        background-color: lightblue;
+        cursor: pointer;
+    }
+
+    table thead tr {
+      border-top: 1px solid gainsboro;
+      background-color: steelblue;
+      line-height: 2;
+      color: white;
+    }
+
+    table tbody tr td,
+    table thead tr td {
+      width: 20%;
+      text-align: center;
+
+    }
+
+
+  </style>
+</head>
+<body>
+
+  <div class="row">
+    <div class="column" >
+      <div class="subColumn" id="qty-chart">
+        <h2>Quantity</h2>
+        <a class="reset" style="display:none" href="javascript:pieChart.filterAll(); dc.redrawAll();">reset</a>
+      </div>
+      <div class="subColumn" id="type-chart">
+        <h2>Type</h2>
+        <a class="reset" style="display:none" href="javascript:rowChart.filterAll(); dc.redrawAll();">reset</a>
+      </div>
+
+    </div>
+
+    <div class="column" id="bubble-chart">
+      <h2>Total-tip</h2>
+      <a class="reset" style="display:none" href="javascript:bubbleChart.filterAll(); dc.redrawAll();">reset</a>
+    </div>
+
+    <div class="column">
+      <h2>Transactions</h2>
+      <table id="payment-table"></table>
+    </div>
+  </div>
+
+  <script type="text/javascript" src="../../d3.js"></script>
+  <script type="text/javascript" src="../../crossfilter.js"></script>
+  <script type="text/javascript" src="../../dc.js"></script>
+  <script type="text/javascript" src="../../colorbrewer.js"></script>
+
+  <script type="text/javascript">
+
+  function print_filter(filter) {
+    var f=eval(filter);
+    if (typeof(f.length) != "undefined") {}else{}
+    if (typeof(f.top) != "undefined") {f=f.top(Infinity);}else{}
+    if (typeof(f.dimension) != "undefined") {f=f.dimension(function(d) { return "";}).top(Infinity);}else{}
+    console.log(filter+"("+f.length+") = "+JSON.stringify(f).replace("[","[\n\t").replace(/}\,/g,"},\n\t").replace("]","\n]"));
+  }
+
+  var data = [
+  {date: "2011-11-14T16:17:54Z", quantity: 2, total: 190, tip: 100, type: "tab"},
+  {date: "2011-11-14T16:20:19Z", quantity: 2, total: 190, tip: 100, type: "tab"},
+  {date: "2011-11-14T16:28:54Z", quantity: 1, total: 300, tip: 200, type: "visa"},
+  {date: "2011-11-14T16:30:43Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T16:48:46Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T16:53:41Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T16:54:06Z", quantity: 1, total: 100, tip: 0, type: "cash"},
+  {date: "2011-11-14T16:58:03Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T17:07:21Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T17:22:59Z", quantity: 2, total: 90, tip: 0, type: "tab"},
+  {date: "2011-11-14T17:25:45Z", quantity: 2, total: 200, tip: 0, type: "cash"},
+  {date: "2011-11-14T17:29:52Z", quantity: 1, total: 200, tip: 100, type: "visa"}
+];
+
+data.forEach(function(d){
+  var tempDate = new Date(d.date);
+  d.date = tempDate;
+
+})
+
+var facts = crossfilter(data);
+//table
+var dateDimension = facts.dimension(function(d){ return d.date; });
+
+//pie chart
+var qtyDimension = facts.dimension(function(d){ return d.quantity; });
+// qtyDimension.filter(1);
+var qtyGroup = qtyDimension.group();
+
+//scatter
+var scatterDimension = facts.dimension(function(d){ return [d.total,d.tip]; });
+var scatterGroup = scatterDimension.group();
+
+//row
+var typeDimension = facts.dimension(function(d){ return d.type; });
+var typeGroup = typeDimension.group();
+
+var dataTable = dc.dataTable("#payment-table")
+      .width(600)
+      .height(550)
+      .dimension(dateDimension)
+      .showGroups(false)
+      // .size(5)
+      .group(function(d){ return d.type; })
+      .columns([{label:'Time',format: function(d){ return d.date.getHours()+':'+d.date.getMinutes(); }},
+                'quantity',
+                'total',
+                'tip',
+                'type'])
+      .sortBy(function(d){ return d.date; })
+      .order(d3.ascending);
+      // .on("renderlet",function(table){
+      //     table.selectAll('.dc-table-group').classed('info',true);
+      // });
+
+var pieChart = dc.pieChart("#qty-chart")
+      .height(300)
+      .radius(100)
+      // .filter(1)
+      .dimension(qtyDimension)
+      .group(qtyGroup);
+
+// typeDimension.filter(['cash','tac']);
+
+var rowChart = dc.rowChart("#type-chart")
+      .height(300)
+      .group(typeGroup)
+      // .filter([['cash','tab']])
+      .dimension(typeDimension);
+
+// scatterDimension.filter(function(d){ return d[1]==0; });
+
+var bubbleChart = dc.bubbleChart("#bubble-chart")
+    .width(450)
+    .height(550)
+    .margins({top:40,bottom:60,right:80,left:60})
+    .dimension(scatterDimension)
+    .group(scatterGroup)
+    // .filter([90,0])
+    .renderHorizontalGridLines(true)
+    .renderVerticalGridLines(true)
+    .clipPadding(70)
+    .colorAccessor(function(d){ return d.key[0]; })
+    .colors(colorbrewer.RdPu[6]).colorDomain([90,300])
+    .keyAccessor(function(d){ return d.key[0]; })
+    .valueAccessor(function(d){ return d.key[1]; })
+    .radiusValueAccessor(function(d){ return d.value; })
+    .maxBubbleRelativeSize(0.2)
+    .yAxisLabel("Tip size")
+    .title(function(d){ return 'x: '+d.key[0]+', y: '+d.key[1]+', val: '+d.value; })
+    .r(d3.scale.linear().domain([1,6]))
+    .y(d3.scale.linear().domain([0,200]))
+    .x(d3.scale.linear().domain([0,300]));
+
+
+dc.renderAll();
+
+  // console.log(data);
+  // console.log(facts);
+  print_filter('scatterGroup');
+
+
+
+  </script>
+
+</body>
+</html>

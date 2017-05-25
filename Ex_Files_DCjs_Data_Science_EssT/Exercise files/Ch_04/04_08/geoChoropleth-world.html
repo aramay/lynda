@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="EN">
+<head>
+  <meta charset="utf-8">
+  <title>Geo choropleth</title>
+  <link rel="stylesheet" type="text/css" href="../../dc.css" />
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    div {
+      -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script type="text/javascript" src="../../d3_3517.js"></script>
+  <script type="text/javascript" src="../../crossfilter.js"></script>
+  <script type="text/javascript" src="../../dc.js"></script>
+
+  <script type="text/javascript">
+
+  function print_filter(filter) {
+    var f=eval(filter);
+    if (typeof(f.length) != "undefined") {}else{}
+    if (typeof(f.top) != "undefined") {f=f.top(Infinity);}else{}
+    if (typeof(f.dimension) != "undefined") {f=f.dimension(function(d) { return "";}).top(Infinity);}else{}
+    console.log(filter+"("+f.length+") = "+JSON.stringify(f).replace("[","[\n\t").replace(/}\,/g,"},\n\t").replace("]","\n]"));
+  }
+
+  var usChart = dc.geoChoroplethChart("#map");
+
+  d3.tsv("world-data.tsv",function(error,data){
+
+    // data.forEach(function(d){
+    //   d.Raised = +d.Raised;
+    // })
+
+
+    var facts = crossfilter(data);
+
+    var countries = facts.dimension(function(d){ return d.name; });
+    var countryGroup = countries.group().reduceSum(function(d){ return +d.val; });
+
+
+
+    d3.json("world.geo.json",function(error2,statesJson){
+
+      // var centre = d3.geo.centroid(statesJson);
+      var projection = d3.geo.mercator().scale(120).translate([400,200]);
+
+
+        usChart
+          .width(1360)
+          .height(500)
+          .dimension(countries)
+          .projection(projection)
+          .group(countryGroup)
+          .colors(d3.scale.category10())
+          .colorDomain([0,3])
+          .colorCalculator(function(d){ return d ? usChart.colors()(d) : '#ccc'; })
+          .overlayGeoJson(statesJson.features,"state",function(d){
+            return d.properties.name;
+          });
+
+          dc.renderAll();
+
+      var places = [];
+      places[0] = ['London',-0.12,51.5];
+      places[1] = ['San Francisco',-122.4,37.7];
+      places[2] = ['Bangalore',77.6,12.9];
+
+      d3.select("svg").selectAll("circle")
+          .data(places)
+          .enter().append("circle")
+              .attr("cx",function(d){ return projection([d[1],d[2]])[0]; })
+              .attr("cy",function(d){ return projection([d[1],d[2]])[1]; })
+              .attr("r",15)
+              .attr("opacity",0.5)
+              .attr("fill","blue");
+
+
+    })
+
+  })
+
+
+  // console.log(data);
+  // console.log(facts);
+  // print_filter('facts');
+
+
+
+  </script>
+
+</body>
+</html>
